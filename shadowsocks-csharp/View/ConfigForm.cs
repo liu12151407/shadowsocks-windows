@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using Shadowsocks.Controller;
 using Shadowsocks.Model;
 using Shadowsocks.Properties;
+using System.Threading.Tasks;
 
 namespace Shadowsocks.View
 {
@@ -22,11 +23,12 @@ namespace Shadowsocks.View
 
         public ConfigForm(ShadowsocksController controller)
         {
-            this.Font = System.Drawing.SystemFonts.MessageBoxFont;
+            this.Font = SystemFonts.MessageBoxFont;
             InitializeComponent();
 
             // a dirty hack
-            this.ServersListBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ServersListBox.Dock = DockStyle.Fill;
+            this.tableLayoutPanel5.Dock = DockStyle.Fill;
             this.PerformLayout();
 
             UpdateTexts();
@@ -46,8 +48,13 @@ namespace Shadowsocks.View
             IPLabel.Text = I18N.GetString("Server Addr");
             ServerPortLabel.Text = I18N.GetString("Server Port");
             PasswordLabel.Text = I18N.GetString("Password");
+            ShowPasswdCheckBox.Text = I18N.GetString("Show Password");
             EncryptionLabel.Text = I18N.GetString("Encryption");
+            PluginLabel.Text = I18N.GetString("Plugin Program");
+            PluginOptionsLabel.Text = I18N.GetString("Plugin Options");
+            PluginArgumentsLabel.Text = I18N.GetString("Plugin Arguments");
             ProxyPortLabel.Text = I18N.GetString("Proxy Port");
+            TempFolderLabel.Text = I18N.GetString("Temp Folder");
             RemarksLabel.Text = I18N.GetString("Remarks");
             TimeoutLabel.Text = I18N.GetString("Timeout(Sec)");
             ServerGroupBox.Text = I18N.GetString("Server");
@@ -94,6 +101,9 @@ namespace Shadowsocks.View
                 }
                 server.password = PasswordTextBox.Text;
                 server.method = EncryptionSelect.Text;
+                server.plugin = PluginTextBox.Text;
+                server.plugin_opts = PluginOptionsTextBox.Text;
+                server.plugin_args = PluginArgumentsTextBox.Text;
                 server.remarks = RemarksTextBox.Text;
                 if (!int.TryParse(TimeoutTextBox.Text, out server.timeout))
                 {
@@ -102,6 +112,7 @@ namespace Shadowsocks.View
                     return false;
                 }
                 int localPort = int.Parse(ProxyPortTextBox.Text);
+                Configuration.CheckTempFolder(TempFolderTextBox.Text);
                 Configuration.CheckServer(server);
                 Configuration.CheckLocalPort(localPort);
                 _modifiedConfiguration.configs[_lastSelectedIndex] = server;
@@ -127,6 +138,9 @@ namespace Shadowsocks.View
                 PasswordTextBox.Text = server.password;
                 ProxyPortTextBox.Text = _modifiedConfiguration.localPort.ToString();
                 EncryptionSelect.Text = server.method ?? "aes-256-cfb";
+                PluginTextBox.Text = server.plugin;
+                PluginOptionsTextBox.Text = server.plugin_opts;
+                PluginArgumentsTextBox.Text = server.plugin_args;
                 RemarksTextBox.Text = server.remarks;
                 TimeoutTextBox.Text = server.timeout.ToString();
             }
@@ -153,6 +167,7 @@ namespace Shadowsocks.View
             ServersListBox.SelectedIndex = _lastSelectedIndex;
             UpdateMoveUpAndDownButton();
             LoadSelectedServer();
+            TempFolderTextBox.Text = _modifiedConfiguration.tempFolder;
         }
 
         private void ConfigForm_Load(object sender, EventArgs e)
@@ -221,14 +236,14 @@ namespace Shadowsocks.View
             _lastSelectedIndex = ServersListBox.SelectedIndex;
         }
 
-        private void DuplicateButton_Click( object sender, EventArgs e )
+        private void DuplicateButton_Click(object sender, EventArgs e)
         {
             if (!SaveOldSelectedServer())
             {
                 return;
             }
             Server currServer = _modifiedConfiguration.configs[_lastSelectedIndex];
-            var currIndex = _modifiedConfiguration.configs.IndexOf( currServer );
+            var currIndex = _modifiedConfiguration.configs.IndexOf(currServer);
             _modifiedConfiguration.configs.Insert(currIndex + 1, currServer);
             LoadConfiguration(_modifiedConfiguration);
             ServersListBox.SelectedIndex = currIndex + 1;
@@ -265,6 +280,7 @@ namespace Shadowsocks.View
                 return;
             }
             controller.SaveServers(_modifiedConfiguration.configs, _modifiedConfiguration.localPort);
+            controller.SaveTempFolder(TempFolderTextBox.Text);
             // SelectedIndex remains valid
             // We handled this in event handlers, e.g. Add/DeleteButton, SelectedIndexChanged
             // and move operations
@@ -351,6 +367,11 @@ namespace Shadowsocks.View
             {
                 MoveConfigItem(+1);  // +1 means move forward
             }
+        }
+
+        private void ShowPasswdCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            this.PasswordTextBox.UseSystemPasswordChar = !this.ShowPasswdCheckBox.Checked;
         }
     }
 }
